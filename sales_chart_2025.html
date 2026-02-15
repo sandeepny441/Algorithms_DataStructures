@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>2025 Monthly Sales Chart</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      color-scheme: light dark;
+      font-family: Inter, Arial, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      padding: 24px;
+      display: flex;
+      justify-content: center;
+      background: #f5f7fb;
+      color: #1f2937;
+    }
+
+    .card {
+      width: min(1000px, 96vw);
+      background: #ffffff;
+      border-radius: 14px;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+      padding: 20px;
+    }
+
+    h1 {
+      margin-top: 0;
+      margin-bottom: 10px;
+      font-size: 1.3rem;
+    }
+
+    .controls {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: 1px solid #d1d5db;
+      background: #eef2ff;
+      color: #1f2937;
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    button.active {
+      background: #4f46e5;
+      border-color: #4f46e5;
+      color: #ffffff;
+    }
+
+    .chart-wrap {
+      position: relative;
+      height: 460px;
+    }
+
+    .hint {
+      margin-top: 10px;
+      color: #4b5563;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>2025 Sales by Month</h1>
+
+    <div class="controls">
+      <button id="numbersBtn" class="active">Show Numbers</button>
+      <button id="percentBtn">Show % of Total</button>
+    </div>
+
+    <div class="chart-wrap">
+      <canvas id="salesChart"></canvas>
+    </div>
+
+    <p class="hint">Bars are rendered side by side with no gaps (histogram-style) across all 12 months.</p>
+  </div>
+
+  <script>
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+
+    // Replace these with your real 2025 monthly sales values.
+    const salesValues = [12000, 13800, 15200, 14600, 16500, 17100, 17900, 18200, 17600, 18900, 20500, 22100];
+
+    const totalSales = salesValues.reduce((sum, n) => sum + n, 0);
+    const percentValues = salesValues.map(v => +(v / totalSales * 100).toFixed(2));
+
+    const labelPlugin = {
+      id: 'valueLabels',
+      afterDatasetsDraw(chart) {
+        const { ctx } = chart;
+        const dataset = chart.data.datasets[0];
+        const meta = chart.getDatasetMeta(0);
+
+        ctx.save();
+        ctx.font = '12px Inter, Arial, sans-serif';
+        ctx.fillStyle = '#0f172a';
+        ctx.textAlign = 'center';
+
+        meta.data.forEach((bar, i) => {
+          const value = dataset.data[i];
+          const suffix = chart.options.plugins.valueLabels.mode === 'percent' ? '%' : '';
+          ctx.fillText(`${value}${suffix}`, bar.x, bar.y - 6);
+        });
+        ctx.restore();
+      }
+    };
+
+    const chart = new Chart(document.getElementById('salesChart'), {
+      type: 'bar',
+      data: {
+        labels: months,
+        datasets: [{
+          label: 'Sales',
+          data: salesValues,
+          backgroundColor: '#4f46e5',
+          borderColor: '#312e81',
+          borderWidth: 1,
+          barPercentage: 1.0,
+          categoryPercentage: 1.0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 400 },
+        scales: {
+          x: {
+            grid: { display: false },
+            title: { display: true, text: 'Months of 2025' },
+            stacked: false
+          },
+          y: {
+            beginAtZero: true,
+            title: { display: true, text: 'Sales (Number)' }
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          valueLabels: {
+            mode: 'number'
+          },
+          tooltip: {
+            callbacks: {
+              label(context) {
+                const value = context.raw;
+                const mode = context.chart.options.plugins.valueLabels.mode;
+                return mode === 'percent' ? `${value}%` : `Sales: ${value}`;
+              }
+            }
+          }
+        }
+      },
+      plugins: [labelPlugin]
+    });
+
+    const numbersBtn = document.getElementById('numbersBtn');
+    const percentBtn = document.getElementById('percentBtn');
+
+    function setMode(mode) {
+      const isPercent = mode === 'percent';
+      chart.data.datasets[0].data = isPercent ? percentValues : salesValues;
+      chart.data.datasets[0].label = isPercent ? 'Sales %' : 'Sales';
+      chart.options.scales.y.title.text = isPercent ? 'Sales (% of yearly total)' : 'Sales (Number)';
+      chart.options.plugins.valueLabels.mode = isPercent ? 'percent' : 'number';
+      chart.update();
+
+      numbersBtn.classList.toggle('active', !isPercent);
+      percentBtn.classList.toggle('active', isPercent);
+    }
+
+    numbersBtn.addEventListener('click', () => setMode('number'));
+    percentBtn.addEventListener('click', () => setMode('percent'));
+  </script>
+</body>
+</html>
